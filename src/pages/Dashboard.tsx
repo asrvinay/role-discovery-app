@@ -5,26 +5,71 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { Search, Bookmark, User, TrendingUp } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+interface Profile {
+  id: string;
+  name: string;
+  email: string;
+}
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [savedJobs, setSavedJobs] = useState([]);
   const [recentSearches, setRecentSearches] = useState([]);
 
   useEffect(() => {
-    // Load saved jobs and recent searches from localStorage
-    const saved = JSON.parse(localStorage.getItem(`saved_jobs_${user?.id}`) || '[]');
-    const searches = JSON.parse(localStorage.getItem(`recent_searches_${user?.id}`) || '[]');
-    setSavedJobs(saved);
-    setRecentSearches(searches);
-  }, [user?.id]);
+    if (user) {
+      fetchProfile();
+      // Load saved jobs and recent searches from localStorage for now
+      const saved = JSON.parse(localStorage.getItem(`saved_jobs_${user.id}`) || '[]');
+      const searches = JSON.parse(localStorage.getItem(`recent_searches_${user.id}`) || '[]');
+      setSavedJobs(saved);
+      setRecentSearches(searches);
+    }
+  }, [user]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      }
+
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Please log in to access your dashboard</h1>
+          <Link to="/login">
+            <Button>Login</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {user?.name}!
+            Welcome back, {profile?.name || user.email}!
           </h1>
           <p className="text-gray-600 mt-2">
             Here's your job search overview
@@ -75,7 +120,7 @@ const Dashboard = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Profile</p>
                   <p className="text-sm font-bold text-gray-900">
-                    {user?.profile ? 'Complete' : 'Incomplete'}
+                    {profile ? 'Complete' : 'Incomplete'}
                   </p>
                 </div>
               </div>
@@ -98,7 +143,7 @@ const Dashboard = () => {
               <Link to="/profile" className="block">
                 <Button className="w-full justify-start" variant="outline">
                   <User className="mr-2 h-4 w-4" />
-                  {user?.profile ? 'Update Profile' : 'Complete Profile'}
+                  Complete Profile
                 </Button>
               </Link>
               <Link to="/saved" className="block">
@@ -115,25 +160,15 @@ const Dashboard = () => {
               <CardTitle>Profile Status</CardTitle>
             </CardHeader>
             <CardContent>
-              {user?.profile ? (
+              {profile ? (
                 <div className="space-y-3">
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Job Titles:</span>
-                    <span className="text-sm font-medium">
-                      {user.profile.jobTitles?.length || 0} selected
-                    </span>
+                    <span className="text-sm text-gray-600">Name:</span>
+                    <span className="text-sm font-medium">{profile.name}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Skills:</span>
-                    <span className="text-sm font-medium">
-                      {user.profile.skills?.length || 0} added
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Locations:</span>
-                    <span className="text-sm font-medium">
-                      {user.profile.locations?.length || 0} preferred
-                    </span>
+                    <span className="text-sm text-gray-600">Email:</span>
+                    <span className="text-sm font-medium">{profile.email}</span>
                   </div>
                   <Link to="/profile">
                     <Button className="w-full mt-4" variant="outline">

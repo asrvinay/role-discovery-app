@@ -1,12 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  profile?: UserProfile;
-}
+import { User, Session } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 
 interface UserProfile {
   jobTitles: string[];
@@ -24,9 +19,10 @@ interface UserProfile {
 
 interface AuthContextType {
   user: User | null;
+  session: Session | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   updateProfile: (profile: UserProfile) => void;
 }
 
@@ -42,82 +38,67 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   useEffect(() => {
-    // Check if user is logged in on app start
-    const savedUser = localStorage.getItem('jobmatch_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Check if user exists in localStorage
-    const users = JSON.parse(localStorage.getItem('jobmatch_users') || '[]');
-    const foundUser = users.find((u: any) => u.email === email && u.password === password);
-    
-    if (!foundUser) {
-      throw new Error('Invalid credentials');
-    }
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    const { password: _, ...userWithoutPassword } = foundUser;
-    setUser(userWithoutPassword);
-    localStorage.setItem('jobmatch_user', JSON.stringify(userWithoutPassword));
+    if (error) {
+      throw new Error(error.message);
+    }
   };
 
   const register = async (email: string, password: string, name: string) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const users = JSON.parse(localStorage.getItem('jobmatch_users') || '[]');
-    
-    // Check if user already exists
-    if (users.find((u: any) => u.email === email)) {
-      throw new Error('User already exists');
-    }
-
-    const newUser = {
-      id: Date.now().toString(),
+    const { error } = await supabase.auth.signUp({
       email,
       password,
-      name,
-      profile: null
-    };
+      options: {
+        data: {
+          name: name,
+        },
+      },
+    });
 
-    users.push(newUser);
-    localStorage.setItem('jobmatch_users', JSON.stringify(users));
-
-    const { password: _, ...userWithoutPassword } = newUser;
-    setUser(userWithoutPassword);
-    localStorage.setItem('jobmatch_user', JSON.stringify(userWithoutPassword));
+    if (error) {
+      throw new Error(error.message);
+    }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('jobmatch_user');
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      throw new Error(error.message);
+    }
   };
 
   const updateProfile = (profile: UserProfile) => {
-    if (user) {
-      const updatedUser = { ...user, profile };
-      setUser(updatedUser);
-      localStorage.setItem('jobmatch_user', JSON.stringify(updatedUser));
-      
-      // Update in users array
-      const users = JSON.parse(localStorage.getItem('jobmatch_users') || '[]');
-      const userIndex = users.findIndex((u: any) => u.id === user.id);
-      if (userIndex !== -1) {
-        users[userIndex] = { ...users[userIndex], profile };
-        localStorage.setItem('jobmatch_users', JSON.stringify(users));
-      }
-    }
+    // This will be implemented later when we add the job preferences table
+    console.log('Profile update:', profile);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, session, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );
