@@ -25,20 +25,8 @@ const Profile = () => {
   const [currentInput, setCurrentInput] = useState('');
   const [inputType, setInputType] = useState<'jobTitle' | 'location' | 'skill' | 'industry' | null>(null);
 
-  useEffect(() => {
-    if (user?.profile) {
-      const profile = user.profile;
-      setJobTitles(profile.jobTitles || []);
-      setLocations(profile.locations || []);
-      setYearsExperience(profile.yearsExperience || 0);
-      setSkills(profile.skills || []);
-      setIndustries(profile.industries || []);
-      setEmploymentTypes(profile.employmentTypes || []);
-      setSalaryMin(profile.salaryRange?.min || 0);
-      setSalaryMax(profile.salaryRange?.max || 0);
-      setRemotePreference(profile.remotePreference || false);
-    }
-  }, [user]);
+  // Remove the useEffect that was trying to access user.profile since it doesn't exist
+  // The profile data will be loaded when we implement proper profile fetching from Supabase
 
   const handleAddItem = (type: string, value: string) => {
     if (!value.trim()) return;
