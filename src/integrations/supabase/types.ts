@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      job_preferences: {
+        Row: {
+          created_at: string
+          employment_types: string[] | null
+          id: string
+          industries: string[] | null
+          job_titles: string[] | null
+          locations: string[] | null
+          remote_preference: boolean | null
+          salary_max: number | null
+          salary_min: number | null
+          skills: string[] | null
+          updated_at: string
+          user_id: string
+          years_experience: number | null
+        }
+        Insert: {
+          created_at?: string
+          employment_types?: string[] | null
+          id?: string
+          industries?: string[] | null
+          job_titles?: string[] | null
+          locations?: string[] | null
+          remote_preference?: boolean | null
+          salary_max?: number | null
+          salary_min?: number | null
+          skills?: string[] | null
+          updated_at?: string
+          user_id: string
+          years_experience?: number | null
+        }
+        Update: {
+          created_at?: string
+          employment_types?: string[] | null
+          id?: string
+          industries?: string[] | null
+          job_titles?: string[] | null
+          locations?: string[] | null
+          remote_preference?: boolean | null
+          salary_max?: number | null
+          salary_min?: number | null
+          skills?: string[] | null
+          updated_at?: string
+          user_id?: string
+          years_experience?: number | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null
