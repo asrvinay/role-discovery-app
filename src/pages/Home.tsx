@@ -30,9 +30,9 @@ const Home = () => {
                   Go to Dashboard
                 </Button>
               </Link>
-              <Link to="/search">
+              <Link to="/job-recommendations">
                 <Button variant="outline" size="lg" className="px-8 py-4 text-lg">
-                  Search Jobs
+                  AI Job Search
                 </Button>
               </Link>
             </div>
