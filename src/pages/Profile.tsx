@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/hooks/use-toast';
@@ -9,6 +10,7 @@ import EmploymentPreferencesSection from '@/components/profile/EmploymentPrefere
 
 const Profile = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [jobTitles, setJobTitles] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
   const [yearsExperience, setYearsExperience] = useState(0);
@@ -149,6 +151,9 @@ const Profile = () => {
         title: "Profile updated!",
         description: "Your job preferences have been saved successfully.",
       });
+
+      // Redirect to dashboard after successful save
+      navigate('/dashboard');
     } catch (error) {
       console.error('Error saving job preferences:', error);
       toast({
