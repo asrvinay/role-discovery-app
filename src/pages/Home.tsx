@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -58,7 +57,7 @@ const Home = () => {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Why Choose JobMatch Pro?
+              Why Choose Wat2do?
             </h2>
             <p className="text-lg text-gray-600">
               Advanced technology meets career expertise

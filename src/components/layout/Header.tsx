@@ -24,7 +24,7 @@ const Header = () => {
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
             <Briefcase className="h-8 w-8 text-indigo-600" />
-            <span className="text-xl font-bold text-gray-900">JobMatch Pro</span>
+            <span className="text-xl font-bold text-gray-900">Wat2do</span>
           </Link>
 
           <nav className="flex items-center space-x-4">
