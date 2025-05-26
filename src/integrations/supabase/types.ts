@@ -57,6 +57,36 @@ export type Database = {
         }
         Relationships: []
       }
+      job_views: {
+        Row: {
+          apply_url: string | null
+          company: string
+          created_at: string
+          id: string
+          job_title: string
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          apply_url?: string | null
+          company: string
+          created_at?: string
+          id?: string
+          job_title: string
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          apply_url?: string | null
+          company?: string
+          created_at?: string
+          id?: string
+          job_title?: string
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string | null

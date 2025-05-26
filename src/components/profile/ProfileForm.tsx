@@ -93,7 +93,7 @@ const ProfileForm: React.FC = () => {
       return;
     }
 
-    // Validate that user has added some preferences
+    // Simplified validation - just need at least one job title OR location
     if (profileData.jobTitles.length === 0 && profileData.locations.length === 0) {
       toast({
         title: "Missing information",
@@ -130,11 +130,11 @@ const ProfileForm: React.FC = () => {
       }
 
       toast({
-        title: "Profile saved successfully!",
-        description: "Your preferences have been saved. You can now search for jobs.",
+        title: "Profile saved!",
+        description: "Redirecting to job search...",
       });
 
-      // Navigate to job recommendations page
+      // Immediately redirect to job search after saving
       navigate('/job-recommendations');
     } catch (error) {
       console.error('Error saving job preferences:', error);
@@ -174,7 +174,7 @@ const ProfileForm: React.FC = () => {
       <ProfileActions 
         onSave={handleSave} 
         isSaving={isSaving} 
-        buttonText={isSaving ? 'Saving Profile...' : 'Save Profile & Find Jobs'}
+        buttonText={isSaving ? 'Saving Profile...' : 'Save Profile & Search Jobs'}
       />
     </div>
   );

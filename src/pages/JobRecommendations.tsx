@@ -169,8 +169,14 @@ const JobRecommendations = () => {
     try {
       console.log('Searching for jobs with preferences:', userPreferences);
       
+      // Use simplified search payload with only job titles and locations
+      const searchPayload = {
+        jobTitles: userPreferences.jobTitles,
+        locations: userPreferences.locations
+      };
+
       const { data, error } = await supabase.functions.invoke('enhanced-job-search', {
-        body: userPreferences
+        body: searchPayload
       });
 
       if (error) {
@@ -231,7 +237,7 @@ const JobRecommendations = () => {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">AI Job Recommendations</h1>
           <p className="text-gray-600 mt-2">
-            Get personalized job recommendations with direct application links
+            Get personalized job recommendations based on your role and location preferences
           </p>
         </div>
 
