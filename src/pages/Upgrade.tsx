@@ -32,8 +32,8 @@ const Upgrade = () => {
       }
 
       if (data?.url) {
-        // Open Stripe checkout in a new tab
-        window.open(data.url, '_blank');
+        // Open Stripe checkout in the current window
+        window.location.href = data.url;
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
