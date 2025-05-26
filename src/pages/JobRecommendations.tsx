@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Search, RefreshCw, User, ExternalLink } from 'lucide-react';
+import { Loader2, Search, RefreshCw, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import JobCard from '@/components/job-search/JobCard';
+import JobApplicationCard from '@/components/job-search/JobApplicationCard';
 
 interface Job {
   title: string;
@@ -21,7 +21,6 @@ interface Job {
 interface UserPreferences {
   jobTitles: string[];
   locations: string[];
-  yearsExperience: number;
 }
 
 interface SearchLimits {
@@ -33,6 +32,7 @@ interface SearchLimits {
 const JobRecommendations = () => {
   const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [viewedJobs, setViewedJobs] = useState<Set<number>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
@@ -84,7 +84,7 @@ const JobRecommendations = () => {
     try {
       const { data, error } = await supabase
         .from('job_preferences')
-        .select('*')
+        .select('job_titles, locations')
         .eq('user_id', user.id)
         .single();
 
@@ -96,14 +96,12 @@ const JobRecommendations = () => {
       if (data) {
         setUserPreferences({
           jobTitles: data.job_titles || [],
-          locations: data.locations || [],
-          yearsExperience: data.years_experience || 0
+          locations: data.locations || []
         });
       } else {
         setUserPreferences({
           jobTitles: [],
-          locations: [],
-          yearsExperience: 0
+          locations: []
         });
       }
     } catch (error) {
@@ -185,6 +183,7 @@ const JobRecommendations = () => {
       if (data?.jobs) {
         setJobs(data.jobs);
         setHasSearched(true);
+        setViewedJobs(new Set()); // Reset viewed jobs
         
         // Update search count
         await updateSearchCount();
@@ -209,6 +208,10 @@ const JobRecommendations = () => {
     }
   };
 
+  const handleJobViewed = (index: number) => {
+    setViewedJobs(prev => new Set([...prev, index]));
+  };
+
   if (isLoadingPreferences) {
     return (
       <div className="min-h-screen bg-gray-50 pt-8">
@@ -220,6 +223,7 @@ const JobRecommendations = () => {
   }
 
   const remainingSearches = Math.max(0, searchLimits.max_searches - searchLimits.searches_used);
+  const unviewedJobs = jobs.filter((_, index) => !viewedJobs.has(index));
 
   return (
     <div className="min-h-screen bg-gray-50 pt-8">
@@ -263,7 +267,7 @@ const JobRecommendations = () => {
               userPreferences.jobTitles.length > 0 || 
               userPreferences.locations.length > 0
             ) ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 {userPreferences.jobTitles.length > 0 && (
                   <div>
                     <strong>Job Titles:</strong> {userPreferences.jobTitles.join(', ')}
@@ -272,11 +276,6 @@ const JobRecommendations = () => {
                 {userPreferences.locations.length > 0 && (
                   <div>
                     <strong>Locations:</strong> {userPreferences.locations.join(', ')}
-                  </div>
-                )}
-                {userPreferences.yearsExperience > 0 && (
-                  <div>
-                    <strong>Experience:</strong> {userPreferences.yearsExperience} years
                   </div>
                 )}
               </div>
@@ -326,38 +325,42 @@ const JobRecommendations = () => {
 
         {hasSearched && (
           <div>
-            <h2 className="text-2xl font-semibold mb-6">
-              {jobs.length > 0 ? `Found ${jobs.length} Job Recommendations` : 'No Jobs Found'}
-            </h2>
-            {jobs.length > 0 ? (
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-semibold">
+                {unviewedJobs.length > 0 ? `${unviewedJobs.length} Jobs Available` : 'All Jobs Viewed'}
+              </h2>
+              {jobs.length > 0 && viewedJobs.size > 0 && (
+                <p className="text-sm text-gray-600">
+                  {viewedJobs.size} of {jobs.length} jobs viewed
+                </p>
+              )}
+            </div>
+            
+            {unviewedJobs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {jobs.map((job, index) => (
-                  <Card key={index} className="hover:shadow-lg transition-shadow">
-                    <CardHeader>
-                      <CardTitle className="text-lg">{job.title}</CardTitle>
-                      <p className="text-sm text-gray-600">{job.company} • {job.location}</p>
-                      {job.salary && (
-                        <p className="text-sm font-medium text-green-600">{job.salary}</p>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-gray-700 mb-4">{job.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-gray-500">{job.source}</span>
-                        {job.apply_url && (
-                          <Button 
-                            size="sm" 
-                            onClick={() => window.open(job.apply_url, '_blank')}
-                            className="flex items-center gap-1"
-                          >
-                            Apply Now <ExternalLink className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {jobs.map((job, index) => {
+                  if (viewedJobs.has(index)) return null;
+                  return (
+                    <JobApplicationCard
+                      key={index}
+                      job={job}
+                      index={index}
+                      onJobViewed={handleJobViewed}
+                    />
+                  );
+                })}
               </div>
+            ) : jobs.length > 0 ? (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <p className="text-gray-600 mb-4">
+                    You've viewed all available jobs! Search again to find new opportunities.
+                  </p>
+                  <Button onClick={searchJobs} disabled={isLoading || (!searchLimits.subscription_active && remainingSearches === 0)}>
+                    Search for More Jobs
+                  </Button>
+                </CardContent>
+              </Card>
             ) : (
               <Card>
                 <CardContent className="text-center py-8">
