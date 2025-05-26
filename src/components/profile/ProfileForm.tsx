@@ -14,6 +14,7 @@ interface Job {
   location: string;
   salary?: string;
   description: string;
+  apply_url?: string;
   source?: string;
 }
 
@@ -31,12 +32,41 @@ const ProfileForm: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [currentInput, setCurrentInput] = useState('');
   const [inputType, setInputType] = useState<InputType>(null);
+  const [searchLimits, setSearchLimits] = useState({ searches_used: 0, max_searches: 2, subscription_active: false });
 
   useEffect(() => {
     if (user) {
       loadJobPreferences();
+      loadSearchLimits();
     }
   }, [user]);
+
+  const loadSearchLimits = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_search_limits')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading search limits:', error);
+        return;
+      }
+
+      if (data) {
+        setSearchLimits({
+          searches_used: data.searches_used || 0,
+          max_searches: data.max_searches || 2,
+          subscription_active: data.subscription_active || false
+        });
+      }
+    } catch (error) {
+      console.error('Error loading search limits:', error);
+    }
+  };
 
   const loadJobPreferences = async () => {
     if (!user) return;
@@ -92,11 +122,59 @@ const ProfileForm: React.FC = () => {
     }));
   };
 
+  const checkSearchLimit = async () => {
+    // If user has active subscription, allow unlimited searches
+    if (searchLimits.subscription_active) {
+      return true;
+    }
+
+    // Check if user has exceeded free search limit
+    if (searchLimits.searches_used >= searchLimits.max_searches) {
+      toast({
+        title: "Search limit reached",
+        description: "You've used all your free searches. Upgrade to Premium for unlimited job searches!",
+        variant: "destructive",
+      });
+      
+      // Navigate to upgrade page
+      navigate('/upgrade');
+      return false;
+    }
+
+    return true;
+  };
+
+  const updateSearchCount = async () => {
+    if (!user || searchLimits.subscription_active) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_search_limits')
+        .update({ 
+          searches_used: searchLimits.searches_used + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating search count:', error);
+      } else {
+        setSearchLimits(prev => ({ ...prev, searches_used: prev.searches_used + 1 }));
+      }
+    } catch (error) {
+      console.error('Error updating search count:', error);
+    }
+  };
+
   const searchJobs = async () => {
+    // Check search limits first
+    const canSearch = await checkSearchLimit();
+    if (!canSearch) return;
+
     try {
       console.log('Searching for jobs with preferences:', profileData);
       
-      const { data, error } = await supabase.functions.invoke('ai-job-search', {
+      const { data, error } = await supabase.functions.invoke('enhanced-job-search', {
         body: profileData
       });
 
@@ -108,6 +186,9 @@ const ProfileForm: React.FC = () => {
       console.log('Job search response:', data);
       
       if (data?.jobs) {
+        // Update search count
+        await updateSearchCount();
+        
         toast({
           title: "Profile saved and jobs found!",
           description: `Found ${data.jobs.length} job recommendations for you.`,
@@ -177,7 +258,7 @@ const ProfileForm: React.FC = () => {
         throw error;
       }
 
-      // After saving successfully, run the AI job search
+      // After saving successfully, run the enhanced AI job search
       await searchJobs();
     } catch (error) {
       console.error('Error saving job preferences:', error);
@@ -197,8 +278,24 @@ const ProfileForm: React.FC = () => {
     );
   }
 
+  const remainingSearches = Math.max(0, searchLimits.max_searches - searchLimits.searches_used);
+  const buttonText = searchLimits.subscription_active 
+    ? (isSaving ? 'Saving & Searching...' : 'Complete Profile & Find Jobs')
+    : (isSaving ? 'Saving & Searching...' : `Find Jobs (${remainingSearches} searches left)`);
+
   return (
     <div className="space-y-6">
+      {!searchLimits.subscription_active && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <p className="text-sm text-blue-800">
+            Free users get {searchLimits.max_searches} job searches. You have {remainingSearches} searches remaining.
+            {remainingSearches === 0 && (
+              <span className="font-semibold"> Upgrade to Premium for unlimited searches!</span>
+            )}
+          </p>
+        </div>
+      )}
+
       <JobPreferencesSection
         jobTitles={profileData.jobTitles}
         locations={profileData.locations}
@@ -217,7 +314,7 @@ const ProfileForm: React.FC = () => {
       <ProfileActions 
         onSave={handleSave} 
         isSaving={isSaving} 
-        buttonText={isSaving ? 'Saving & Searching...' : 'Complete Profile & Find Jobs'} 
+        buttonText={buttonText}
       />
     </div>
   );

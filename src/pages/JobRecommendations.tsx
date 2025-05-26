@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Search, RefreshCw, User } from 'lucide-react';
+import { Loader2, Search, RefreshCw, User, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,6 +14,7 @@ interface Job {
   location: string;
   salary?: string;
   description: string;
+  apply_url?: string;
   source?: string;
 }
 
@@ -23,6 +24,12 @@ interface UserPreferences {
   yearsExperience: number;
 }
 
+interface SearchLimits {
+  searches_used: number;
+  max_searches: number;
+  subscription_active: boolean;
+}
+
 const JobRecommendations = () => {
   const { user } = useAuth();
   const [jobs, setJobs] = useState<Job[]>([]);
@@ -30,13 +37,45 @@ const JobRecommendations = () => {
   const [hasSearched, setHasSearched] = useState(false);
   const [userPreferences, setUserPreferences] = useState<UserPreferences | null>(null);
   const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
+  const [searchLimits, setSearchLimits] = useState<SearchLimits>({ 
+    searches_used: 0, 
+    max_searches: 2, 
+    subscription_active: false 
+  });
 
-  // Load user preferences when component mounts
   useEffect(() => {
     if (user) {
       loadUserPreferences();
+      loadSearchLimits();
     }
   }, [user]);
+
+  const loadSearchLimits = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('user_search_limits')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading search limits:', error);
+        return;
+      }
+
+      if (data) {
+        setSearchLimits({
+          searches_used: data.searches_used || 0,
+          max_searches: data.max_searches || 2,
+          subscription_active: data.subscription_active || false
+        });
+      }
+    } catch (error) {
+      console.error('Error loading search limits:', error);
+    }
+  };
 
   const loadUserPreferences = async () => {
     if (!user) return;
@@ -61,7 +100,6 @@ const JobRecommendations = () => {
           yearsExperience: data.years_experience || 0
         });
       } else {
-        // No preferences found, set default values
         setUserPreferences({
           jobTitles: [],
           locations: [],
@@ -75,6 +113,45 @@ const JobRecommendations = () => {
     }
   };
 
+  const checkSearchLimit = () => {
+    if (searchLimits.subscription_active) {
+      return true;
+    }
+
+    if (searchLimits.searches_used >= searchLimits.max_searches) {
+      toast({
+        title: "Search limit reached",
+        description: "You've used all your free searches. Upgrade to Premium for unlimited job searches!",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const updateSearchCount = async () => {
+    if (!user || searchLimits.subscription_active) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_search_limits')
+        .update({ 
+          searches_used: searchLimits.searches_used + 1,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error updating search count:', error);
+      } else {
+        setSearchLimits(prev => ({ ...prev, searches_used: prev.searches_used + 1 }));
+      }
+    } catch (error) {
+      console.error('Error updating search count:', error);
+    }
+  };
+
   const searchJobs = async () => {
     if (!userPreferences) {
       toast({
@@ -85,11 +162,16 @@ const JobRecommendations = () => {
       return;
     }
 
+    // Check search limits
+    if (!checkSearchLimit()) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       console.log('Searching for jobs with preferences:', userPreferences);
       
-      const { data, error } = await supabase.functions.invoke('ai-job-search', {
+      const { data, error } = await supabase.functions.invoke('enhanced-job-search', {
         body: userPreferences
       });
 
@@ -98,14 +180,18 @@ const JobRecommendations = () => {
         throw error;
       }
 
-      console.log('Job search response:', data);
+      console.log('Enhanced job search response:', data);
       
       if (data?.jobs) {
         setJobs(data.jobs);
         setHasSearched(true);
+        
+        // Update search count
+        await updateSearchCount();
+        
         toast({
           title: "Jobs found!",
-          description: `Found ${data.jobs.length} job recommendations for you.`,
+          description: `Found ${data.jobs.length} job recommendations with application links.`,
         });
       } else {
         throw new Error('No jobs found in response');
@@ -133,15 +219,37 @@ const JobRecommendations = () => {
     );
   }
 
+  const remainingSearches = Math.max(0, searchLimits.max_searches - searchLimits.searches_used);
+
   return (
     <div className="min-h-screen bg-gray-50 pt-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">AI Job Recommendations</h1>
           <p className="text-gray-600 mt-2">
-            Get personalized job recommendations powered by AI web search
+            Get personalized job recommendations with direct application links
           </p>
         </div>
+
+        {!searchLimits.subscription_active && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              Free users get {searchLimits.max_searches} job searches. You have <strong>{remainingSearches}</strong> searches remaining.
+              {remainingSearches === 0 && (
+                <span className="font-semibold"> Upgrade to Premium for unlimited searches!</span>
+              )}
+            </p>
+            {remainingSearches === 0 && (
+              <Button 
+                className="mt-2" 
+                size="sm"
+                onClick={() => window.location.href = '/upgrade'}
+              >
+                Upgrade Now
+              </Button>
+            )}
+          </div>
+        )}
 
         <Card className="mb-8">
           <CardHeader>
@@ -188,15 +296,24 @@ const JobRecommendations = () => {
               userPreferences.locations.length > 0
             ) && (
               <div className="mt-4 flex gap-2">
-                <Button onClick={searchJobs} disabled={isLoading}>
+                <Button 
+                  onClick={searchJobs} 
+                  disabled={isLoading || (!searchLimits.subscription_active && remainingSearches === 0)}
+                >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
                     <Search className="h-4 w-4 mr-2" />
                   )}
-                  {hasSearched ? 'Search Again' : 'Find Jobs with AI'}
+                  {!searchLimits.subscription_active && remainingSearches === 0 
+                    ? 'Upgrade for More Searches'
+                    : hasSearched ? 'Search Again' : 'Find Jobs with AI'
+                  }
+                  {!searchLimits.subscription_active && remainingSearches > 0 && (
+                    ` (${remainingSearches} left)`
+                  )}
                 </Button>
-                {hasSearched && (
+                {hasSearched && remainingSearches > 0 && (
                   <Button variant="outline" onClick={searchJobs} disabled={isLoading}>
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh Results
@@ -215,7 +332,30 @@ const JobRecommendations = () => {
             {jobs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {jobs.map((job, index) => (
-                  <JobCard key={index} job={job} />
+                  <Card key={index} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <CardTitle className="text-lg">{job.title}</CardTitle>
+                      <p className="text-sm text-gray-600">{job.company} • {job.location}</p>
+                      {job.salary && (
+                        <p className="text-sm font-medium text-green-600">{job.salary}</p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-gray-700 mb-4">{job.description}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-gray-500">{job.source}</span>
+                        {job.apply_url && (
+                          <Button 
+                            size="sm" 
+                            onClick={() => window.open(job.apply_url, '_blank')}
+                            className="flex items-center gap-1"
+                          >
+                            Apply Now <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
             ) : (
@@ -228,24 +368,6 @@ const JobRecommendations = () => {
               </Card>
             )}
           </div>
-        )}
-
-        {!hasSearched && userPreferences && (
-          userPreferences.jobTitles.length === 0 && 
-          userPreferences.locations.length === 0
-        ) && (
-          <Card>
-            <CardContent className="text-center py-12">
-              <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Complete Your Profile First</h3>
-              <p className="text-gray-600 mb-4">
-                Add your job preferences to get personalized AI-powered job recommendations.
-              </p>
-              <Button onClick={() => window.location.href = '/profile'}>
-                Complete Profile
-              </Button>
-            </CardContent>
-          </Card>
         )}
       </div>
     </div>
