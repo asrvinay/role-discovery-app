@@ -38,6 +38,11 @@ serve(async (req) => {
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
+    const { planType } = await req.json();
+    if (!planType) {
+      throw new Error("Plan type is required");
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     // Check if customer already exists
@@ -47,7 +52,31 @@ serve(async (req) => {
       customerId = customers.data[0].id;
     }
 
-    // Create checkout session for premium subscription
+    // Define plan details
+    const planDetails = {
+      silver: {
+        name: "Silver Plan",
+        description: "10 AI job searches per month with enhanced recommendations",
+        amount: 500, // $5.00
+      },
+      gold: {
+        name: "Gold Plan", 
+        description: "20 AI job searches per month with premium features",
+        amount: 750, // $7.50
+      },
+      platinum: {
+        name: "Platinum Plan",
+        description: "50 AI job searches per month with elite features",
+        amount: 1500, // $15.00
+      }
+    };
+
+    const selectedPlan = planDetails[planType as keyof typeof planDetails];
+    if (!selectedPlan) {
+      throw new Error("Invalid plan type");
+    }
+
+    // Create checkout session for the selected subscription plan
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       customer_email: customerId ? undefined : user.email,
@@ -56,10 +85,10 @@ serve(async (req) => {
           price_data: {
             currency: "usd",
             product_data: { 
-              name: "Wat2do Premium", 
-              description: "Unlimited AI job searches and premium features"
+              name: selectedPlan.name,
+              description: selectedPlan.description
             },
-            unit_amount: 999, // $9.99
+            unit_amount: selectedPlan.amount,
             recurring: { interval: "month" },
           },
           quantity: 1,
@@ -70,6 +99,7 @@ serve(async (req) => {
       cancel_url: `${req.headers.get("origin")}/upgrade`,
       metadata: {
         user_id: user.id,
+        plan_type: planType,
       },
     });
 
