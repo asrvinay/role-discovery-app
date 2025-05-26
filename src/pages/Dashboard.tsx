@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Bookmark, User, TrendingUp, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import DashboardWelcome from '@/components/dashboard/DashboardWelcome';
+import DashboardMetrics from '@/components/dashboard/DashboardMetrics';
+import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions';
+import DashboardActivitySummary from '@/components/dashboard/DashboardActivitySummary';
 
 interface Profile {
   id: string;
@@ -190,141 +192,13 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 pt-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
-            Welcome back, {profile?.name || user.email}!
-          </h1>
-          <p className="text-gray-600 mt-2">
-            Here's your job search overview
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Search className="h-8 w-8 text-indigo-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Total Searches</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? '...' : metrics.totalSearches}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Bookmark className="h-8 w-8 text-green-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Jobs Viewed</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? '...' : metrics.viewedJobs}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <FileText className="h-8 w-8 text-blue-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Saved Jobs</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? '...' : metrics.savedJobs}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-purple-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Applications</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {isLoading ? '...' : metrics.appliedJobs}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <User className="h-8 w-8 text-orange-600" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Profile</p>
-                  <p className="text-sm font-bold text-gray-900">
-                    {isLoading ? '...' : (metrics.profileComplete ? 'Complete' : 'Incomplete')}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <DashboardWelcome profile={profile} userEmail={user.email || ''} />
+        
+        <DashboardMetrics metrics={metrics} isLoading={isLoading} />
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Link to="/job-recommendations" className="block">
-                <Button className="w-full justify-start" variant="outline">
-                  <Search className="mr-2 h-4 w-4" />
-                  Search for Jobs
-                </Button>
-              </Link>
-              <Link to="/saved" className="block">
-                <Button className="w-full justify-start" variant="outline">
-                  <Bookmark className="mr-2 h-4 w-4" />
-                  View Saved Jobs
-                </Button>
-              </Link>
-              <Link to="/profile" className="block">
-                <Button className="w-full justify-start" variant="outline">
-                  <User className="mr-2 h-4 w-4" />
-                  Complete Profile
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Job Search Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Total Searches:</span>
-                  <span className="text-sm font-medium">{isLoading ? '...' : metrics.totalSearches}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Jobs Saved:</span>
-                  <span className="text-sm font-medium">{isLoading ? '...' : metrics.savedJobs}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Applications:</span>
-                  <span className="text-sm font-medium">{isLoading ? '...' : metrics.appliedJobs}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Profile Status:</span>
-                  <span className={`text-sm font-medium ${metrics.profileComplete ? 'text-green-600' : 'text-orange-600'}`}>
-                    {isLoading ? '...' : (metrics.profileComplete ? 'Complete' : 'Incomplete')}
-                  </span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <DashboardQuickActions />
+          <DashboardActivitySummary metrics={metrics} isLoading={isLoading} />
         </div>
       </div>
     </div>
