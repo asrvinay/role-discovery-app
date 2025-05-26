@@ -23,23 +23,31 @@ const Upgrade = () => {
 
     setIsLoading(true);
     try {
+      console.log('Starting upgrade process for plan:', planType);
+      
       const { data, error } = await supabase.functions.invoke('create-checkout', {
         body: { planType }
       });
 
+      console.log('Checkout response:', { data, error });
+
       if (error) {
+        console.error('Checkout error:', error);
         throw error;
       }
 
       if (data?.url) {
-        // Open Stripe checkout in the current window
+        console.log('Redirecting to Stripe checkout:', data.url);
+        // Use window.location.href for better compatibility
         window.location.href = data.url;
+      } else {
+        throw new Error('No checkout URL received');
       }
     } catch (error) {
       console.error('Error creating checkout session:', error);
       toast({
         title: "Upgrade failed",
-        description: "Unable to start upgrade process. Please try again.",
+        description: error.message || "Unable to start upgrade process. Please try again.",
         variant: "destructive",
       });
     } finally {
