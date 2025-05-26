@@ -13,6 +13,7 @@ import Dashboard from "./pages/Dashboard";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import JobRecommendations from "./pages/JobRecommendations";
+import SavedJobs from "./pages/SavedJobs";
 import Upgrade from "./pages/Upgrade";
 import Success from "./pages/Success";
 
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/profile" element={<Profile />} />
               <Route path="/search" element={<JobRecommendations />} />
               <Route path="/job-recommendations" element={<JobRecommendations />} />
+              <Route path="/saved" element={<SavedJobs />} />
               <Route path="/upgrade" element={<Upgrade />} />
               <Route path="/success" element={<Success />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

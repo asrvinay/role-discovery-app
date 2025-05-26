@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, Bookmark, User, TrendingUp } from 'lucide-react';
+import { Search, Bookmark, User, TrendingUp, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Profile {
@@ -17,6 +17,7 @@ interface DashboardMetrics {
   totalSearches: number;
   savedJobs: number;
   viewedJobs: number;
+  appliedJobs: number;
   profileComplete: boolean;
 }
 
@@ -27,6 +28,7 @@ const Dashboard = () => {
     totalSearches: 0,
     savedJobs: 0,
     viewedJobs: 0,
+    appliedJobs: 0,
     profileComplete: false
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -49,6 +51,7 @@ const Dashboard = () => {
       await Promise.all([
         loadJobSearches(),
         loadJobViews(),
+        loadSavedJobs(),
         checkProfileComplete()
       ]);
     } catch (error) {
@@ -119,6 +122,33 @@ const Dashboard = () => {
     }
   };
 
+  const loadSavedJobs = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('saved_jobs')
+        .select('id, applied_status')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error loading saved jobs:', error);
+        return;
+      }
+
+      const savedJobsCount = data?.length || 0;
+      const appliedJobsCount = data?.filter(job => job.applied_status).length || 0;
+
+      setMetrics(prev => ({ 
+        ...prev, 
+        savedJobs: savedJobsCount,
+        appliedJobs: appliedJobsCount
+      }));
+    } catch (error) {
+      console.error('Error loading saved jobs:', error);
+    }
+  };
+
   const checkProfileComplete = async () => {
     if (!user) return;
 
@@ -169,7 +199,7 @@ const Dashboard = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center">
@@ -201,10 +231,12 @@ const Dashboard = () => {
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center">
-                <TrendingUp className="h-8 w-8 text-blue-600" />
+                <FileText className="h-8 w-8 text-blue-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Applications</p>
-                  <p className="text-2xl font-bold text-gray-900">0</p>
+                  <p className="text-sm font-medium text-gray-600">Saved Jobs</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : metrics.savedJobs}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -213,7 +245,21 @@ const Dashboard = () => {
           <Card className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="flex items-center">
-                <User className="h-8 w-8 text-purple-600" />
+                <TrendingUp className="h-8 w-8 text-purple-600" />
+                <div className="ml-4">
+                  <p className="text-sm font-medium text-gray-600">Applications</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : metrics.appliedJobs}
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="hover:shadow-lg transition-shadow">
+            <CardContent className="p-6">
+              <div className="flex items-center">
+                <User className="h-8 w-8 text-orange-600" />
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Profile</p>
                   <p className="text-sm font-bold text-gray-900">
@@ -237,6 +283,12 @@ const Dashboard = () => {
                   Search for Jobs
                 </Button>
               </Link>
+              <Link to="/saved" className="block">
+                <Button className="w-full justify-start" variant="outline">
+                  <Bookmark className="mr-2 h-4 w-4" />
+                  View Saved Jobs
+                </Button>
+              </Link>
               <Link to="/profile" className="block">
                 <Button className="w-full justify-start" variant="outline">
                   <User className="mr-2 h-4 w-4" />
@@ -248,41 +300,29 @@ const Dashboard = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Profile Status</CardTitle>
+              <CardTitle>Job Search Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              {profile ? (
-                <div className="space-y-3">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Name:</span>
-                    <span className="text-sm font-medium">{profile.name}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Email:</span>
-                    <span className="text-sm font-medium">{profile.email}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Profile Status:</span>
-                    <span className={`text-sm font-medium ${metrics.profileComplete ? 'text-green-600' : 'text-orange-600'}`}>
-                      {isLoading ? '...' : (metrics.profileComplete ? 'Complete' : 'Incomplete')}
-                    </span>
-                  </div>
-                  <Link to="/profile">
-                    <Button className="w-full mt-4" variant="outline">
-                      Update Profile
-                    </Button>
-                  </Link>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Total Searches:</span>
+                  <span className="text-sm font-medium">{isLoading ? '...' : metrics.totalSearches}</span>
                 </div>
-              ) : (
-                <div className="text-center py-6">
-                  <p className="text-gray-600 mb-4">
-                    Complete your profile to get personalized job recommendations
-                  </p>
-                  <Link to="/profile">
-                    <Button>Complete Profile</Button>
-                  </Link>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Jobs Saved:</span>
+                  <span className="text-sm font-medium">{isLoading ? '...' : metrics.savedJobs}</span>
                 </div>
-              )}
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Applications:</span>
+                  <span className="text-sm font-medium">{isLoading ? '...' : metrics.appliedJobs}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Profile Status:</span>
+                  <span className={`text-sm font-medium ${metrics.profileComplete ? 'text-green-600' : 'text-orange-600'}`}>
+                    {isLoading ? '...' : (metrics.profileComplete ? 'Complete' : 'Incomplete')}
+                  </span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </div>

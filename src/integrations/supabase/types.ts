@@ -138,6 +138,57 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_jobs: {
+        Row: {
+          applied_at: string | null
+          applied_status: boolean
+          apply_url: string | null
+          company: string
+          created_at: string
+          description: string
+          id: string
+          job_title: string
+          location: string
+          salary: string | null
+          saved_at: string
+          source: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          applied_status?: boolean
+          apply_url?: string | null
+          company: string
+          created_at?: string
+          description: string
+          id?: string
+          job_title: string
+          location: string
+          salary?: string | null
+          saved_at?: string
+          source?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          applied_status?: boolean
+          apply_url?: string | null
+          company?: string
+          created_at?: string
+          description?: string
+          id?: string
+          job_title?: string
+          location?: string
+          salary?: string | null
+          saved_at?: string
+          source?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_search_limits: {
         Row: {
           created_at: string | null
