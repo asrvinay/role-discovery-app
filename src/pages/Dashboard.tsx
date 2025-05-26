@@ -15,7 +15,7 @@ interface Profile {
   email: string;
 }
 
-interface DashboardMetrics {
+interface DashboardMetricsData {
   totalSearches: number;
   savedJobs: number;
   viewedJobs: number;
@@ -26,7 +26,7 @@ interface DashboardMetrics {
 const Dashboard = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [metrics, setMetrics] = useState<DashboardMetrics>({
+  const [metrics, setMetrics] = useState<DashboardMetricsData>({
     totalSearches: 0,
     savedJobs: 0,
     viewedJobs: 0,

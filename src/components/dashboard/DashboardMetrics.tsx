@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Search, Bookmark, User, TrendingUp, FileText } from 'lucide-react';
 
-interface DashboardMetrics {
+interface DashboardMetricsData {
   totalSearches: number;
   savedJobs: number;
   viewedJobs: number;
@@ -12,7 +12,7 @@ interface DashboardMetrics {
 }
 
 interface DashboardMetricsProps {
-  metrics: DashboardMetrics;
+  metrics: DashboardMetricsData;
   isLoading: boolean;
 }
 

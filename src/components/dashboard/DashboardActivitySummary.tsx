@@ -2,7 +2,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
-interface DashboardMetrics {
+interface DashboardMetricsData {
   totalSearches: number;
   savedJobs: number;
   viewedJobs: number;
@@ -11,7 +11,7 @@ interface DashboardMetrics {
 }
 
 interface DashboardActivitySummaryProps {
-  metrics: DashboardMetrics;
+  metrics: DashboardMetricsData;
   isLoading: boolean;
 }
 
