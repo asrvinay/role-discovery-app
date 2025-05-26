@@ -5,13 +5,18 @@ import { Button } from '@/components/ui/button';
 interface ProfileActionsProps {
   onSave: () => void;
   isSaving: boolean;
+  buttonText?: string;
 }
 
-const ProfileActions: React.FC<ProfileActionsProps> = ({ onSave, isSaving }) => {
+const ProfileActions: React.FC<ProfileActionsProps> = ({ 
+  onSave, 
+  isSaving, 
+  buttonText = 'Save Profile' 
+}) => {
   return (
     <div className="flex justify-end">
       <Button onClick={onSave} size="lg" disabled={isSaving}>
-        {isSaving ? 'Saving...' : 'Save Profile'}
+        {buttonText}
       </Button>
     </div>
   );
