@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +48,27 @@ const JobRecommendations = () => {
       loadSearchLimits();
     }
   }, [user]);
+
+  const saveJobSearch = async (searchQuery: any, resultsCount: number) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('job_searches')
+        .insert({
+          user_id: user.id,
+          search_query: searchQuery,
+          results_count: resultsCount,
+          search_type: 'ai_recommendations'
+        });
+
+      if (error) {
+        console.error('Error saving job search:', error);
+      }
+    } catch (error) {
+      console.error('Error saving job search:', error);
+    }
+  };
 
   const loadSearchLimits = async () => {
     if (!user) return;
@@ -160,7 +180,6 @@ const JobRecommendations = () => {
       return;
     }
 
-    // Check search limits
     if (!checkSearchLimit()) {
       return;
     }
@@ -169,7 +188,6 @@ const JobRecommendations = () => {
     try {
       console.log('Searching for jobs with preferences:', userPreferences);
       
-      // Use simplified search payload with only job titles and locations
       const searchPayload = {
         jobTitles: userPreferences.jobTitles,
         locations: userPreferences.locations
@@ -189,9 +207,11 @@ const JobRecommendations = () => {
       if (data?.jobs) {
         setJobs(data.jobs);
         setHasSearched(true);
-        setViewedJobs(new Set()); // Reset viewed jobs
+        setViewedJobs(new Set());
         
-        // Update search count
+        // Save the job search to database
+        await saveJobSearch(searchPayload, data.jobs.length);
+        
         await updateSearchCount();
         
         toast({
@@ -235,7 +255,7 @@ const JobRecommendations = () => {
     <div className="min-h-screen bg-gray-50 pt-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">AI Job Recommendations</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Job Search</h1>
           <p className="text-gray-600 mt-2">
             Get personalized job recommendations based on your role and location preferences
           </p>

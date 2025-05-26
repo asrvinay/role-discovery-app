@@ -13,22 +13,50 @@ interface Profile {
   email: string;
 }
 
+interface DashboardMetrics {
+  totalSearches: number;
+  savedJobs: number;
+  viewedJobs: number;
+  profileComplete: boolean;
+}
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [savedJobs, setSavedJobs] = useState([]);
-  const [recentSearches, setRecentSearches] = useState([]);
+  const [metrics, setMetrics] = useState<DashboardMetrics>({
+    totalSearches: 0,
+    savedJobs: 0,
+    viewedJobs: 0,
+    profileComplete: false
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (user) {
-      fetchProfile();
-      // Load saved jobs and recent searches from localStorage for now
-      const saved = JSON.parse(localStorage.getItem(`saved_jobs_${user.id}`) || '[]');
-      const searches = JSON.parse(localStorage.getItem(`recent_searches_${user.id}`) || '[]');
-      setSavedJobs(saved);
-      setRecentSearches(searches);
+      loadDashboardData();
     }
   }, [user]);
+
+  const loadDashboardData = async () => {
+    if (!user) return;
+
+    setIsLoading(true);
+    try {
+      // Load profile
+      await fetchProfile();
+      
+      // Load metrics
+      await Promise.all([
+        loadJobSearches(),
+        loadJobViews(),
+        checkProfileComplete()
+      ]);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -48,6 +76,71 @@ const Dashboard = () => {
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
+    }
+  };
+
+  const loadJobSearches = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('job_searches')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error loading job searches:', error);
+        return;
+      }
+
+      setMetrics(prev => ({ ...prev, totalSearches: data?.length || 0 }));
+    } catch (error) {
+      console.error('Error loading job searches:', error);
+    }
+  };
+
+  const loadJobViews = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('job_views')
+        .select('id')
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Error loading job views:', error);
+        return;
+      }
+
+      setMetrics(prev => ({ ...prev, viewedJobs: data?.length || 0 }));
+    } catch (error) {
+      console.error('Error loading job views:', error);
+    }
+  };
+
+  const checkProfileComplete = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('job_preferences')
+        .select('job_titles, locations')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error checking profile:', error);
+        return;
+      }
+
+      const isComplete = data && 
+        ((data.job_titles && data.job_titles.length > 0) || 
+         (data.locations && data.locations.length > 0));
+
+      setMetrics(prev => ({ ...prev, profileComplete: !!isComplete }));
+    } catch (error) {
+      console.error('Error checking profile:', error);
     }
   };
 
@@ -82,8 +175,10 @@ const Dashboard = () => {
               <div className="flex items-center">
                 <Search className="h-8 w-8 text-indigo-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Recent Searches</p>
-                  <p className="text-2xl font-bold text-gray-900">{recentSearches.length}</p>
+                  <p className="text-sm font-medium text-gray-600">Total Searches</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : metrics.totalSearches}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -94,8 +189,10 @@ const Dashboard = () => {
               <div className="flex items-center">
                 <Bookmark className="h-8 w-8 text-green-600" />
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600">Saved Jobs</p>
-                  <p className="text-2xl font-bold text-gray-900">{savedJobs.length}</p>
+                  <p className="text-sm font-medium text-gray-600">Jobs Viewed</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {isLoading ? '...' : metrics.viewedJobs}
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -120,7 +217,7 @@ const Dashboard = () => {
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Profile</p>
                   <p className="text-sm font-bold text-gray-900">
-                    {profile ? 'Complete' : 'Incomplete'}
+                    {isLoading ? '...' : (metrics.profileComplete ? 'Complete' : 'Incomplete')}
                   </p>
                 </div>
               </div>
@@ -134,7 +231,7 @@ const Dashboard = () => {
               <CardTitle>Quick Actions</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Link to="/search" className="block">
+              <Link to="/job-recommendations" className="block">
                 <Button className="w-full justify-start" variant="outline">
                   <Search className="mr-2 h-4 w-4" />
                   Search for Jobs
@@ -144,12 +241,6 @@ const Dashboard = () => {
                 <Button className="w-full justify-start" variant="outline">
                   <User className="mr-2 h-4 w-4" />
                   Complete Profile
-                </Button>
-              </Link>
-              <Link to="/saved" className="block">
-                <Button className="w-full justify-start" variant="outline">
-                  <Bookmark className="mr-2 h-4 w-4" />
-                  View Saved Jobs
                 </Button>
               </Link>
             </CardContent>
@@ -169,6 +260,12 @@ const Dashboard = () => {
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Email:</span>
                     <span className="text-sm font-medium">{profile.email}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Profile Status:</span>
+                    <span className={`text-sm font-medium ${metrics.profileComplete ? 'text-green-600' : 'text-orange-600'}`}>
+                      {isLoading ? '...' : (metrics.profileComplete ? 'Complete' : 'Incomplete')}
+                    </span>
                   </div>
                   <Link to="/profile">
                     <Button className="w-full mt-4" variant="outline">
