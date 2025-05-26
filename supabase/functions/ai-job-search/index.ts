@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { jobTitles, locations, skills, industries, employmentTypes, salaryMin, salaryMax, remotePreference } = await req.json();
+    const { jobTitles, locations, yearsExperience } = await req.json();
     
     const perplexityApiKey = Deno.env.get('PERPLEXITY_API_KEY');
     if (!perplexityApiKey) {
@@ -23,13 +23,9 @@ serve(async (req) => {
     // Build search query based on user preferences
     const jobTitlesText = jobTitles?.length ? jobTitles.join(' or ') : 'any position';
     const locationsText = locations?.length ? locations.join(' or ') : 'any location';
-    const skillsText = skills?.length ? ` with skills in ${skills.join(', ')}` : '';
-    const industriesText = industries?.length ? ` in ${industries.join(' or ')} industry` : '';
-    const employmentText = employmentTypes?.length ? ` ${employmentTypes.join(' or ')} positions` : '';
-    const remoteText = remotePreference ? ' including remote work options' : '';
-    const salaryText = salaryMin && salaryMax ? ` with salary range $${salaryMin}-$${salaryMax}` : '';
+    const experienceText = yearsExperience > 0 ? ` for candidates with ${yearsExperience} years of experience` : '';
 
-    const searchQuery = `Find 10 current job openings for ${jobTitlesText} positions in ${locationsText}${skillsText}${industriesText}${employmentText}${remoteText}${salaryText}. Please provide specific job listings with company names, job titles, locations, and brief descriptions. Focus on recent postings from job boards and company websites.`;
+    const searchQuery = `Find 10 current job openings for ${jobTitlesText} positions in ${locationsText}${experienceText}. Please provide specific job listings with company names, job titles, locations, and brief descriptions. Focus on recent postings from job boards and company websites.`;
 
     console.log('Searching for jobs with query:', searchQuery);
 

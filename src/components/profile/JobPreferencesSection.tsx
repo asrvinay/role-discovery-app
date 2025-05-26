@@ -14,8 +14,8 @@ interface JobPreferencesSectionProps {
   onAddLocation: (value: string) => void;
   onRemoveLocation: (index: number) => void;
   onYearsExperienceChange: (value: number) => void;
-  inputType: 'jobTitle' | 'location' | 'skill' | 'industry' | null;
-  setInputType: (type: 'jobTitle' | 'location' | 'skill' | 'industry' | null) => void;
+  inputType: 'jobTitle' | 'location' | null;
+  setInputType: (type: 'jobTitle' | 'location' | null) => void;
   currentInput: string;
   setCurrentInput: (value: string) => void;
 }

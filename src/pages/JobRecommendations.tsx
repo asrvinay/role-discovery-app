@@ -20,12 +20,7 @@ interface Job {
 interface UserPreferences {
   jobTitles: string[];
   locations: string[];
-  skills: string[];
-  industries: string[];
-  employmentTypes: string[];
-  salaryMin: number;
-  salaryMax: number;
-  remotePreference: boolean;
+  yearsExperience: number;
 }
 
 const JobRecommendations = () => {
@@ -63,24 +58,14 @@ const JobRecommendations = () => {
         setUserPreferences({
           jobTitles: data.job_titles || [],
           locations: data.locations || [],
-          skills: data.skills || [],
-          industries: data.industries || [],
-          employmentTypes: data.employment_types || [],
-          salaryMin: data.salary_min || 0,
-          salaryMax: data.salary_max || 0,
-          remotePreference: data.remote_preference || false
+          yearsExperience: data.years_experience || 0
         });
       } else {
         // No preferences found, set default values
         setUserPreferences({
           jobTitles: [],
           locations: [],
-          skills: [],
-          industries: [],
-          employmentTypes: [],
-          salaryMin: 0,
-          salaryMax: 0,
-          remotePreference: false
+          yearsExperience: 0
         });
       }
     } catch (error) {
@@ -168,8 +153,7 @@ const JobRecommendations = () => {
           <CardContent>
             {userPreferences && (
               userPreferences.jobTitles.length > 0 || 
-              userPreferences.locations.length > 0 || 
-              userPreferences.skills.length > 0
+              userPreferences.locations.length > 0
             ) ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                 {userPreferences.jobTitles.length > 0 && (
@@ -182,24 +166,9 @@ const JobRecommendations = () => {
                     <strong>Locations:</strong> {userPreferences.locations.join(', ')}
                   </div>
                 )}
-                {userPreferences.skills.length > 0 && (
+                {userPreferences.yearsExperience > 0 && (
                   <div>
-                    <strong>Skills:</strong> {userPreferences.skills.join(', ')}
-                  </div>
-                )}
-                {userPreferences.industries.length > 0 && (
-                  <div>
-                    <strong>Industries:</strong> {userPreferences.industries.join(', ')}
-                  </div>
-                )}
-                {userPreferences.employmentTypes.length > 0 && (
-                  <div>
-                    <strong>Employment:</strong> {userPreferences.employmentTypes.join(', ')}
-                  </div>
-                )}
-                {userPreferences.salaryMin > 0 && userPreferences.salaryMax > 0 && (
-                  <div>
-                    <strong>Salary:</strong> ${userPreferences.salaryMin.toLocaleString()} - ${userPreferences.salaryMax.toLocaleString()}
+                    <strong>Experience:</strong> {userPreferences.yearsExperience} years
                   </div>
                 )}
               </div>
@@ -216,8 +185,7 @@ const JobRecommendations = () => {
             
             {userPreferences && (
               userPreferences.jobTitles.length > 0 || 
-              userPreferences.locations.length > 0 || 
-              userPreferences.skills.length > 0
+              userPreferences.locations.length > 0
             ) && (
               <div className="mt-4 flex gap-2">
                 <Button onClick={searchJobs} disabled={isLoading}>
@@ -264,8 +232,7 @@ const JobRecommendations = () => {
 
         {!hasSearched && userPreferences && (
           userPreferences.jobTitles.length === 0 && 
-          userPreferences.locations.length === 0 && 
-          userPreferences.skills.length === 0
+          userPreferences.locations.length === 0
         ) && (
           <Card>
             <CardContent className="text-center py-12">
